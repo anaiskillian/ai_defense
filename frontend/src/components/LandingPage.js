@@ -30,7 +30,7 @@ const LandingPage = () => {
             component="h1"
             sx={{
               fontWeight: 'bold',
-              background: 'linear-gradient(45deg, #1E40AF 30%, #2563EB 90%)',
+              background: 'linear-gradient(45deg, #0A2472 0%, #1E3B8A 30%, #2B4ECB 60%, #4169E1 90%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               color: 'transparent',
