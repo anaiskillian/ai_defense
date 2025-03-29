@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Box, Typography, IconButton, Dialog, Paper } from '@mui/material';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseIcon from '@mui/icons-material/Close';
+import YOLOFeed from './YOLOFeed';
+import LLMAssessment from './LLMAssessment';
 
 const VideoFeed = ({ droneId, threatLevel }) => {
   const [open, setOpen] = useState(false);
@@ -15,58 +17,33 @@ const VideoFeed = ({ droneId, threatLevel }) => {
         elevation={0}
         sx={{
           height: '100%',
-          backgroundColor: 'rgba(20, 20, 20, 0.95)',
+          backgroundColor: '#0A0A0A',
           border: '1px solid rgba(30, 64, 175, 0.1)',
-          borderRadius: '12px',
+          borderRadius: '16px',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
+          transition: 'all 0.3s ease-in-out',
+          cursor: 'pointer',
+          '&:hover': {
+            transform: 'scale(1.05)',
+            boxShadow: '0 0 20px rgba(65, 105, 225, 0.3)',
+            zIndex: 1,
+          },
         }}
       >
-        {/* Header with threat level and expand button */}
+        {/* Video placeholder with expand button overlay */}
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            p: 2,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              color: threatLevel === 'HIGH' ? '#ef4444' : 
-                     threatLevel === 'MEDIUM' ? '#f59e0b' : '#22c55e',
-            }}
-          >
-            {threatLevel}
-          </Typography>
-          <IconButton 
-            onClick={handleOpen}
-            sx={{ 
-              color: '#1E40AF',
-              '&:hover': {
-                backgroundColor: 'rgba(30, 64, 175, 0.1)',
-              }
-            }}
-          >
-            <OpenInFullIcon />
-          </IconButton>
-        </Box>
-
-        {/* Video placeholder */}
-        <Box
-          sx={{
-            flex: 1,
-            backgroundColor: '#0A0A0A',
-            m: 2,
-            mt: 0,
-            borderRadius: '8px',
             position: 'relative',
+            aspectRatio: '16/9',
             width: '100%',
+            height: '100%',
+            overflow: 'hidden',
             '&::before': {
               content: '""',
               display: 'block',
-              paddingTop: '56.25%', // 9/16 = 0.5625 = 56.25%
+              paddingTop: '56.25%', // 16:9 aspect ratio
             },
           }}
         >
@@ -80,12 +57,29 @@ const VideoFeed = ({ droneId, threatLevel }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              backgroundColor: '#0A0A0A',
             }}
           >
             <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
               Live Feed - Drone {droneId}
             </Typography>
           </Box>
+          {/* Expand button overlay */}
+          <IconButton 
+            onClick={handleOpen}
+            sx={{ 
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              color: '#1E40AF',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              '&:hover': {
+                backgroundColor: 'rgba(30, 64, 175, 0.3)',
+              }
+            }}
+          >
+            <OpenInFullIcon />
+          </IconButton>
         </Box>
       </Paper>
 
@@ -102,71 +96,49 @@ const VideoFeed = ({ droneId, threatLevel }) => {
         }}
       >
         <Box sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-            <Typography variant="h4">
-              Drone {droneId} - Detailed Analysis
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ 
+              color: threatLevel === 'HIGH' ? '#ef4444' : 
+                     threatLevel === 'MEDIUM' ? '#f59e0b' : '#22c55e',
+              fontWeight: 'bold'
+            }}>
+              Drone {droneId} Feed
             </Typography>
-            <IconButton
-              onClick={handleClose}
-              sx={{ color: '#FFFFFF' }}
-            >
+            <IconButton onClick={handleClose} sx={{ color: 'white' }}>
               <CloseIcon />
             </IconButton>
           </Box>
-          
+
           <Box sx={{ display: 'flex', gap: 3 }}>
             {/* Video feed */}
             <Box
               sx={{
                 flex: 2,
                 backgroundColor: '#141414',
-                borderRadius: '12px',
+                borderRadius: '16px',
                 height: '70vh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
+                position: 'relative',
+                p: 1.5,
+                '& > *': {
+                  position: 'absolute',
+                  top: '12px',
+                  left: '12px',
+                  right: '12px',
+                  bottom: '12px',
+                  width: 'calc(100% - 24px)',
+                  height: 'calc(100% - 24px)',
+                }
               }}
             >
-              <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                Live Feed - Drone {droneId}
-              </Typography>
+              <YOLOFeed droneId={droneId} />
             </Box>
 
             {/* Analysis panel */}
-            <Paper
-              elevation={0}
-              sx={{
-                flex: 1,
-                p: 3,
-                backgroundColor: 'rgba(20, 20, 20, 0.95)',
-                borderRadius: '12px',
-                border: '1px solid rgba(30, 64, 175, 0.1)',
-              }}
-            >
-              <Typography variant="h6" gutterBottom>
-                Threat Analysis
-              </Typography>
-              <Typography
-                variant="h5"
-                gutterBottom
-                sx={{
-                  color: threatLevel === 'HIGH' ? '#ef4444' : 
-                         threatLevel === 'MEDIUM' ? '#f59e0b' : '#22c55e',
-                  mb: 3,
-                }}
-              >
-                {threatLevel} THREAT LEVEL
-              </Typography>
-              <Typography variant="body1" paragraph>
-                Sonar Data: [Simulated sonar readings]
-              </Typography>
-              <Typography variant="body1" paragraph>
-                Camera Analysis: [Object detection results]
-              </Typography>
-              <Typography variant="body1">
-                LLM Assessment: [Threat analysis details]
-              </Typography>
-            </Paper>
+            <LLMAssessment threatLevel={threatLevel} />
           </Box>
         </Box>
       </Dialog>

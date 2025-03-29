@@ -12,6 +12,9 @@ const Dashboard = () => {
     { id: 1, threatLevel: 'HIGH' },
     { id: 2, threatLevel: 'LOW' },
     { id: 3, threatLevel: 'MEDIUM' },
+    { id: 4, threatLevel: 'LOW' },
+    { id: 5, threatLevel: 'MEDIUM' },
+    { id: 6, threatLevel: 'HIGH' },
   ];
 
   return (
@@ -25,11 +28,17 @@ const Dashboard = () => {
       }}
     >
       <Typography 
-        variant="h4" 
+        variant="h3" 
         component="h1" 
         sx={{ 
           p: 3,
-          pb: 2,
+          pb: 5,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          background: 'linear-gradient(45deg, #4169E1 0%, #6495ED 30%, #87CEEB 60%, #B0E0E6 90%)',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          color: 'transparent',
         }}
       >
         Threat Analysis Dashboard
@@ -59,7 +68,9 @@ const Dashboard = () => {
             sx={{
               width: '100%',
               margin: 0,
-              flexWrap: 'nowrap',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 3,
             }}
           >
             {drones.map((drone) => (
@@ -67,14 +78,18 @@ const Dashboard = () => {
                 item
                 key={drone.id}
                 sx={{
-                  flex: 1,
-                  minWidth: 0, // Allows the flex item to shrink below its minimum content size
+                  minWidth: 0,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                 }}
               >
-                <VideoFeed
-                  droneId={drone.id}
-                  threatLevel={drone.threatLevel}
-                />
+                <Box sx={{ width: '98%' }}>
+                  <VideoFeed
+                    droneId={drone.id}
+                    threatLevel={drone.threatLevel}
+                  />
+                </Box>
               </Grid>
             ))}
           </Grid>
