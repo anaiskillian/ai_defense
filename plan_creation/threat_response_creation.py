@@ -1,17 +1,15 @@
 import requests
 import json
 import os
-from typing import Dict, List, Any
+import time
+import argparse
+from dotenv import load_dotenv  # Import dotenv
+from typing import Dict, List, Any, ClassVar, Optional
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain.llms import OpenAI
+from langchain_core.output_parsers import StrOutputParser
+from langchain.llms.base import LLM
 from langgraph.graph import StateGraph
-from langgraph.checkpoint import MemorySaver
-import langgraph as lg
-
-# You can use open-source models like Llama 3 or OpenAI models
-# For open source deployment, change this to use a local model
-from langchain_community.llms import HuggingFaceHub
+from langgraph.checkpoint.memory import MemorySaver
 
 # Define the initial state structure
 class AgentState(dict):
@@ -19,220 +17,240 @@ class AgentState(dict):
     threat_data: Dict[str, Any]
     analysis: Dict[str, Any] = None
     response_plan: Dict[str, Any] = None
-    recommendations: Dict[str, Dict[str, Any]] = None
+    recommendations: Dict[str, Any] = None
     status: str = "initialized"
+
+# Create a simple mock LLM for testing
+class MockLLM(LLM):
+    """Mock LLM that returns placeholder responses for fast testing"""
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+    
+    @property
+    def _llm_type(self) -> str:
+        return "mock-llm"
+    
+    def _call(self, prompt: str, stop=None, **kwargs) -> str:
+        """Return a mock response based on the prompt type"""
+        time.sleep(1)  # Add a small delay to simulate processing
+        
+        if "threat analysis system" in prompt.lower():
+            return """
+            Based on the detection data, this appears to be a surveillance drone flying at medium altitude (150m) during dusk hours in clear weather. 
+            
+            Type of threat: Unauthorized drone surveillance
+            Intent: Likely intelligence gathering or area mapping
+            Danger level: Medium
+            Capabilities: Video/photo recording, possible radio signal interception
+            Limitations: Limited flight time, vulnerable to signal jamming
+            Strategic implications: Potential preparation for future operations or targeting of critical infrastructure
+            """
+        
+        elif "response planning system" in prompt.lower():
+            return """
+            IMMEDIATE ACTIONS:
+            1. Deploy counter-drone measures to track the device
+            2. Activate electronic countermeasures to jam signals if necessary
+            3. Alert nearby security units to maintain visual contact
+            
+            RESOURCES REQUIRED:
+            - Signal intelligence unit
+            - Counter-drone response team
+            - Radar tracking system
+            
+            COMMUNICATION PROTOCOLS:
+            - Maintain secure channel Alpha for all communications
+            - Hourly situational updates to command
+            - Alert civilian airspace control if drone moves toward populated areas
+            
+            CONTINGENCY MEASURES:
+            - Prepare forced landing protocols if threat escalates
+            - Ready physical interception units if drone approaches sensitive areas
+            
+            TIMELINE:
+            - Immediate tracking and monitoring
+            - Escalation decision within 15 minutes
+            - Resolution within 60 minutes
+            """
+        
+        elif "coordination system" in prompt.lower():
+            return """
+            NAVY COMMAND:
+            - Maintain alert status for naval assets in the area
+            - Prepare defensive countermeasures
+            - Update intelligence assessment based on drone flight pattern
+            
+            COAST GUARD:
+            - Patrol waterways surrounding the detection area
+            - Coordinate with local maritime traffic
+            - Ready response vessels for possible interception
+            
+            INTELLIGENCE SERVICES:
+            - Analyze drone technical specifications based on flight characteristics
+            - Cross-reference with known drone deployments in the region
+            - Investigate potential operators based on capabilities
+            
+            LOCAL LAW ENFORCEMENT:
+            - Secure perimeter of critical infrastructure in flight path
+            - Prepare for public safety measures if drone moves toward populated areas
+            - Coordinate with federal authorities on jurisdiction
+            """
+        
+        else:
+            return "Generated response for: " + prompt[:100] + "..."
 
 # Define the nodes of our agentic system
 def threat_analyzer(state: AgentState) -> AgentState:
     """Analyze the detected threat and its implications"""
-    llm = HuggingFaceHub(repo_id="meta-llama/Llama-3.1-8B-Instruct", 
-                          huggingfacehub_api_token=os.environ["HF_TOKEN"])
+    # Use the mock LLM for testing
+    llm = MockLLM()
     
     # Define the threat analysis prompt
     analysis_template = """
     You are a naval defense threat analysis system. Analyze the following detection data
     and provide a comprehensive threat assessment:
-    
+
     DETECTION DATA:
-    {detection_data}
-    
-    COORDINATES: {coordinates}
-    ENVIRONMENT: {environment}
-    
-    Your analysis should include:
-    1. Threat identification and classification
-    2. Potential intentions of the detected object(s)
-    3. Risk assessment to nearby assets (submarines, ships, undersea cables, etc.)
-    4. Confidence level of your assessment
-    5. Additional intelligence requirements
-    
-    FORMAT YOUR RESPONSE AS A JSON object with the following keys:
-    - threat_type
-    - threat_level 
-    - risk_assessment
-    - confidence_level
-    - intelligence_gaps
-    - situational_summary
+    {threat_data}
+
+    Your task is to analyze this detection and assess:
+    1. Type of threat and potential intent
+    2. Level of danger (low, medium, high, critical)
+    3. Possible capabilities and limitations
+    4. Strategic implications
+
+    THREAT ANALYSIS:
     """
     
     analysis_prompt = PromptTemplate(
-        template=analysis_template,
-        input_variables=["detection_data", "coordinates", "environment"]
+        input_variables=["threat_data"],
+        template=analysis_template
     )
     
-    analysis_chain = LLMChain(llm=llm, prompt=analysis_prompt)
+    # Create and run the analysis chain using modern LangChain patterns
+    chain = analysis_prompt | llm | StrOutputParser()
     
-    # Extract relevant data from the state
-    detection_data = state["threat_data"]["raw_description"]
-    coordinates = json.dumps(state["threat_data"]["coordinates"])
-    environment = json.dumps(state["threat_data"]["environment_conditions"])
-    
-    # Run the analysis
-    analysis_result = analysis_chain.run(
-        detection_data=detection_data,
-        coordinates=coordinates,
-        environment=environment
-    )
-    
-    # Parse the result (assuming it's valid JSON)
-    try:
-        analysis_json = json.loads(analysis_result)
-    except:
-        # In case the LLM doesn't return valid JSON
-        analysis_json = {
-            "threat_type": "unknown",
-            "threat_level": state["threat_data"]["threat_level"],
-            "risk_assessment": "Could not analyze properly",
-            "confidence_level": "low",
-            "intelligence_gaps": ["complete analysis failed"],
-            "situational_summary": analysis_result
-        }
+    # Use the new invoke method instead of run
+    analysis_result = chain.invoke({
+        "threat_data": json.dumps(state["threat_data"], indent=2)
+    })
     
     # Update the state with the analysis
-    state["analysis"] = analysis_json
+    state["analysis"] = {
+        "assessment": analysis_result,
+        "timestamp": time.time()
+    }
     state["status"] = "analyzed"
     
+    print("Analysis complete")
     return state
 
 def response_planner(state: AgentState) -> AgentState:
     """Generate response plans based on the threat analysis"""
-    llm = HuggingFaceHub(repo_id="meta-llama/Llama-3.1-8B-Instruct", 
-                          huggingfacehub_api_token=os.environ["HF_TOKEN"])
+    llm = MockLLM()
     
     # Define the response planning prompt
     response_template = """
-    You are a naval defense strategic response system. Based on the following threat analysis,
-    develop a comprehensive response plan:
-    
+    You are a naval defense response planning system. Based on the following threat analysis,
+    generate a comprehensive response plan:
+
+    THREAT DATA:
+    {threat_data}
+
     THREAT ANALYSIS:
     {analysis}
-    
-    RAW DETECTION DATA:
-    {detection_data}
-    
-    COORDINATES: {coordinates}
-    
-    Your response plan should include:
-    1. Immediate actions to be taken by the monitoring drone
-    2. Secondary deployment recommendations (additional drones, vessels, etc.)
-    3. Communication protocols and information sharing requirements
-    4. Escalation thresholds and conditions
-    5. Timeline for implementation
-    
-    FORMAT YOUR RESPONSE AS A JSON object with the following keys:
-    - drone_actions (list of specific actions for the monitoring drone)
-    - secondary_deployments (list of recommended additional resources)
-    - communication_protocols (specific communication recommendations)
-    - escalation_conditions (when to escalate the response)
-    - timeline (timeframes for different actions)
-    - priority_level (numerical 1-5, with 5 being highest)
+
+    Your task is to create a detailed response plan that includes:
+    1. Immediate actions to address the threat
+    2. Required resources and personnel
+    3. Communication protocols
+    4. Contingency measures
+    5. Timeline for response
+
+    RESPONSE PLAN:
     """
     
     response_prompt = PromptTemplate(
-        template=response_template,
-        input_variables=["analysis", "detection_data", "coordinates"]
+        input_variables=["threat_data", "analysis"],
+        template=response_template
     )
     
-    response_chain = LLMChain(llm=llm, prompt=response_prompt)
+    # Create and run the response chain using modern LangChain patterns
+    chain = response_prompt | llm | StrOutputParser()
     
-    # Run the response planning
-    response_result = response_chain.run(
-        analysis=json.dumps(state["analysis"]),
-        detection_data=state["threat_data"]["raw_description"],
-        coordinates=json.dumps(state["threat_data"]["coordinates"])
-    )
+    # Use the new invoke method instead of run
+    response_result = chain.invoke({
+        "threat_data": json.dumps(state["threat_data"], indent=2),
+        "analysis": state["analysis"]["assessment"]
+    })
     
-    # Parse the result
-    try:
-        response_json = json.loads(response_result)
-    except:
-        # Fallback if parsing fails
-        response_json = {
-            "drone_actions": ["Maintain surveillance", "Collect additional data"],
-            "secondary_deployments": ["None specified"],
-            "communication_protocols": ["Standard reporting"],
-            "escalation_conditions": ["Significant change in threat behavior"],
-            "timeline": "Immediate drone actions, reassess in 30 minutes",
-            "priority_level": 3
-        }
+    # Update the state with the response plan
+    state["response_plan"] = {
+        "plan": response_result,
+        "timestamp": time.time()
+    }
+    state["status"] = "planned"
     
-    # Update the state
-    state["response_plan"] = response_json
-    state["status"] = "response_planned"
-    
+    print("Response plan complete")
     return state
 
 def agency_recommendations(state: AgentState) -> AgentState:
     """Generate agency-specific recommendations"""
-    llm = HuggingFaceHub(repo_id="meta-llama/Llama-3.1-8B-Instruct", 
-                          huggingfacehub_api_token=os.environ["HF_TOKEN"])
+    llm = MockLLM()
     
     # Define the agency recommendations prompt
     recommendations_template = """
-    You are a defense intelligence coordination system. Based on the following threat analysis and response plan,
-    provide specific recommendations for relevant US government agencies:
-    
+    You are a naval defense coordination system. Based on the following threat analysis and response plan,
+    provide specific recommendations for different agencies:
+
+    THREAT DATA:
+    {threat_data}
+
     THREAT ANALYSIS:
     {analysis}
-    
+
     RESPONSE PLAN:
     {response_plan}
-    
-    RAW DETECTION DATA:
-    {detection_data}
-    
-    Generate specific, actionable recommendations for each of these agencies that might need to be involved:
-    - US Navy
-    - Coast Guard
-    - ICE (Immigration and Customs Enforcement)
-    - FBI
-    - DHS (Department of Homeland Security)
-    - NMIO (National Maritime Intelligence-Integration Office)
-    
-    For each relevant agency, determine if they should be notified based on the threat context.
-    Only include agencies that should be involved given the specific threat.
-    
-    FORMAT YOUR RESPONSE AS A JSON object with agency names as keys and for each agency include:
-    - notify (boolean indicating if they should be notified)
-    - priority (1-5 with 5 being highest)
-    - recommended_actions (list of specific actions for this agency)
-    - intelligence_sharing (what information should be shared with this agency)
-    - coordination (how this agency should coordinate with others)
+
+    Your task is to provide specific recommendations for the correct agency from the following agencies:
+    1. Navy Command
+    2. Coast Guard
+    3. Local Law Enforcement
+    4. Intelligence Services
+    5. Civilian Authorities
+
+    Format your response as specific actionable items for each agency. Limit the amount of agencies called. 
+
+    AGENCY RECOMMENDATIONS:
     """
     
     recommendations_prompt = PromptTemplate(
-        template=recommendations_template,
-        input_variables=["analysis", "response_plan", "detection_data"]
+        input_variables=["threat_data", "analysis", "response_plan"],
+        template=recommendations_template
     )
     
-    recommendations_chain = LLMChain(llm=llm, prompt=recommendations_prompt)
+    # Create and run the recommendations chain using modern LangChain patterns
+    chain = recommendations_prompt | llm | StrOutputParser()
     
-    # Run the recommendations generation
-    rec_result = recommendations_chain.run(
-        analysis=json.dumps(state["analysis"]),
-        response_plan=json.dumps(state["response_plan"]),
-        detection_data=state["threat_data"]["raw_description"]
-    )
+    # Use the new invoke method instead of run
+    recommendations_result = chain.invoke({
+        "threat_data": json.dumps(state["threat_data"], indent=2),
+        "analysis": state["analysis"]["assessment"],
+        "response_plan": state["response_plan"]["plan"]
+    })
     
-    # Parse the result
-    try:
-        rec_json = json.loads(rec_result)
-    except:
-        # Fallback if parsing fails
-        rec_json = {
-            "US Navy": {
-                "notify": True,
-                "priority": 4,
-                "recommended_actions": ["Monitor situation", "Standby for deployment if needed"],
-                "intelligence_sharing": "Full detection data and analysis",
-                "coordination": "Lead maritime response coordination"
-            }
-        }
+    # Parse recommendations for each agency
+    recommendations = {
+        "content": recommendations_result,
+        "timestamp": time.time()
+    }
     
-    # Update the state
-    state["recommendations"] = rec_json
-    state["status"] = "completed"
+    # Update the state with the recommendations
+    state["recommendations"] = recommendations
+    state["status"] = "complete"
     
+    print("Agency recommendations complete")
     return state
 
 # Define the agentic workflow
@@ -256,64 +274,100 @@ def build_agent_workflow():
     return workflow.compile()
 
 # Function to process a new threat detection
-def process_threat_detection(detection_data: Dict[str, Any]):
+def process_threat_detection(detection_data: Dict[str, Any]) -> Dict[str, Any]:
     """Process a detection and run it through the agent workflow"""
-    # Initialize the state
+    # Initialize the workflow
+    workflow = build_agent_workflow()
+    
+    # Create initial state
     initial_state = AgentState(
         threat_data=detection_data,
         status="initialized"
     )
     
-    # Build the workflow
-    agent_workflow = build_agent_workflow()
+    # Run the workflow
+    final_state = workflow.invoke(initial_state)
     
-    # Run the workflow with checkpointing
-    memory_saver = MemorySaver()
-    for output in agent_workflow.stream(initial_state, config={"checkpointer": memory_saver}):
-        pass
+    # Extract threat level from analysis
+    analysis_text = final_state["analysis"]["assessment"].lower()
+    if "critical" in analysis_text:
+        threat_level = "severe"
+    elif "high" in analysis_text:
+        threat_level = "high"
+    elif "medium" in analysis_text:
+        threat_level = "medium"
+    else:
+        threat_level = "low"
     
-    # Return the final state
-    return output
+    # Format the response in a clean JSON structure
+    response = {
+        "threat_level": threat_level,
+        "detection": {
+            "type": detection_data.get("type", "Unknown"),
+            "timestamp": detection_data.get("timestamp", time.time()),
+            "location": detection_data.get("location", {})
+        },
+        "analysis": {
+            "description": final_state["analysis"]["assessment"].strip(),
+            "timestamp": final_state["analysis"]["timestamp"]
+        },
+        "response_plan": {
+            "steps": [step.strip() for step in final_state["response_plan"]["plan"].split("\n") if step.strip() and not step.strip().startswith("IMMEDIATE") and not step.strip().startswith("RESOURCES") and not step.strip().startswith("COMMUNICATION") and not step.strip().startswith("CONTINGENCY") and not step.strip().startswith("TIMELINE")],
+            "timestamp": final_state["response_plan"]["timestamp"]
+        },
+        "agencies": {
+            agency.strip(":\n "): [
+                action.strip("- \n") 
+                for action in section.split("-")[1:] 
+                if action.strip()
+            ]
+            for agency, section in [
+                part.split(":", 1) 
+                for part in final_state["recommendations"]["content"].split("\n\n") 
+                if ":" in part
+            ]
+        }
+    }
+    
+    print(f"\nThreat Response Summary:")
+    print(json.dumps(response, indent=2))
+    return response
 
-# Function to connect to the detection service
-def fetch_and_process_detections(detection_service_url: str = "http://localhost:8000"):
-    """Poll the detection service and process any new threats"""
-    # In a real implementation, this would either:
-    # 1. Subscribe to a message queue where detections are published
-    # 2. Poll an endpoint periodically
-    # Here we show a simplified polling approach
-    
-    try:
-        response = requests.get(f"{detection_service_url}/latest_detections")
-        if response.status_code == 200:
-            detections = response.json()
+# Function to poll the detection service
+def poll_detection_service(mock_mode: bool) -> List[Dict[str, Any]]:
+    """Poll the detection service or load mock data."""
+    if mock_mode:
+        print("Running in mock mode. Loading data from mock_detections.json")
+        try:
+            with open("plan_creation/mock_detections.json", "r") as f:
+                detections = json.load(f)
+        except FileNotFoundError:
+            print("Error: mock_detections.json not found")
+            return []
+        
+        responses = []
+        for detection in detections:
+            print(f"Processing detection: {detection.get('type', 'Unknown')}")
+            response = process_threat_detection(detection)
+            responses.append(response)
             
-            for detection in detections:
-                # Process each detection
-                result = process_threat_detection(detection)
-                
-                # Submit results to relevant systems
-                # In real implementation, this might trigger alerts, update dashboards, etc.
-                print(f"Processed threat: {result}")
-                
-                # Example: Send high-priority threats to a special endpoint
-                if result["analysis"]["threat_level"] in ["high", "critical"]:
-                    requests.post(
-                        f"{detection_service_url}/high_priority_alert",
-                        json=result
-                    )
-    
-    except Exception as e:
-        print(f"Error processing detections: {e}")
-
-# API endpoint to directly process a detection
-def analyze_detection_api(detection_data: Dict[str, Any]) -> Dict[str, Any]:
-    """API function to analyze a detection directly"""
-    return process_threat_detection(detection_data)
+        return responses
+    else:
+        # TODO: Implement real detection service polling
+        pass
 
 if __name__ == "__main__":
-    # This would typically run in a loop or be triggered by events
-    import time
-    while True:
-        fetch_and_process_detections()
-        time.sleep(60)  # Poll every minute
+    load_dotenv()  # Load environment variables from .env file
+    
+    parser = argparse.ArgumentParser(description='Run the threat response agent')
+    parser.add_argument('--mock', action='store_true', help='Run with mock data')
+    args = parser.parse_args()
+    
+    print("Starting Threat Response Agent...")
+    print("Polling for new detections...")
+    
+    # Poll for detections
+    responses = poll_detection_service(args.mock)
+    
+    if not responses:
+        print("No detections found.")
