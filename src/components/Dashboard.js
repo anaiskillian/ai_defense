@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Grid,
-} from '@mui/material';
+import React from 'react';
+import { Box, Typography, Grid } from '@mui/material';
 import VideoFeed from './VideoFeed';
 
 const Dashboard = () => {
-  // Simulated drone data
-  const drones = [
-    { id: 1, threatLevel: 'HIGH' },
-    { id: 2, threatLevel: 'LOW' },
-    { id: 3, threatLevel: 'MEDIUM' },
+  // Simulated drone data for top row
+  const topRowDrones = [
+    { id: 1 },
+    { id: 2 },
+    { id: 3 },
+  ];
+
+  // Simulated drone data for bottom row
+  const bottomRowDrones = [
+    { id: 4 },
+    { id: 5 },
+    { id: 6 },
   ];
 
   return (
@@ -24,60 +27,80 @@ const Dashboard = () => {
         flexDirection: 'column',
       }}
     >
-      <Typography 
-        variant="h4" 
-        component="h1" 
-        sx={{ 
-          p: 3,
-          pb: 2,
-        }}
-      >
-        Threat Analysis Dashboard
-      </Typography>
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ textAlign: 'center', mb: 6 }}>
+          <Typography
+            variant="h3"
+            component="h1"
+            className="gradient-text"
+            sx={{
+              fontWeight: 600,
+              fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+            }}
+          >
+            Threat Analysis Dashboard
+          </Typography>
+        </Box>
 
-      <Box
-        sx={{
-          flex: 1,
-          display: 'flex',
-          p: 3,
-          pt: 0,
-        }}
-      >
         <Box
           sx={{
-            display: 'flex',
-            width: '100%',
             backgroundColor: 'rgba(20, 20, 20, 0.95)',
             borderRadius: '16px',
             border: '1px solid rgba(30, 64, 175, 0.1)',
             p: 3,
           }}
         >
-          <Grid 
-            container 
-            spacing={3}
-            sx={{
-              width: '100%',
-              margin: 0,
-              flexWrap: 'nowrap',
-            }}
-          >
-            {drones.map((drone) => (
-              <Grid 
-                item
-                key={drone.id}
-                sx={{
-                  flex: 1,
-                  minWidth: 0, // Allows the flex item to shrink below its minimum content size
-                }}
-              >
-                <VideoFeed
-                  droneId={drone.id}
-                  threatLevel={drone.threatLevel}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          {/* Top Row */}
+          <Box sx={{ mb: 3 }}>
+            <Grid 
+              container 
+              spacing={3}
+              sx={{
+                width: '100%',
+                margin: 0,
+                flexWrap: 'nowrap',
+              }}
+            >
+              {topRowDrones.map((drone) => (
+                <Grid 
+                  item
+                  key={drone.id}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <VideoFeed droneId={drone.id} />
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+
+          {/* Bottom Row */}
+          <Box>
+            <Grid 
+              container 
+              spacing={3}
+              sx={{
+                width: '100%',
+                margin: 0,
+                flexWrap: 'nowrap',
+              }}
+            >
+              {bottomRowDrones.map((drone) => (
+                <Grid 
+                  item
+                  key={drone.id}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <VideoFeed droneId={drone.id} />
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         </Box>
       </Box>
     </Box>

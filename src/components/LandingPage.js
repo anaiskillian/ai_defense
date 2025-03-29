@@ -1,9 +1,11 @@
 import React from 'react';
 import { Box, Typography, Container, Paper, Button } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import SecurityIcon from '@mui/icons-material/Security';
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+
   return (
     <Container maxWidth="md">
       <Box
@@ -28,12 +30,10 @@ const LandingPage = () => {
           <Typography
             variant="h2"
             component="h1"
+            className="gradient-text"
             sx={{
+              fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' },
               fontWeight: 'bold',
-              background: 'linear-gradient(45deg, #1E40AF 30%, #2563EB 90%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              color: 'transparent',
             }}
           >
             SentinAI
@@ -66,19 +66,25 @@ const LandingPage = () => {
         </Paper>
 
         {/* Dashboard Link */}
-        <Button
-          component={Link}
-          to="/dashboard"
-          variant="contained"
-          size="large"
-          sx={{
-            py: 2,
-            px: 6,
-            fontSize: '1.2rem',
-          }}
-        >
-          Access Dashboard
-        </Button>
+        <Box className="animated-border">
+          <Button
+            onClick={() => navigate('/dashboard')}
+            variant="contained"
+            size="large"
+            sx={{
+              py: 2,
+              px: 6,
+              fontSize: '1.2rem',
+              backgroundColor: '#1e3a8a',
+              color: '#fff',
+              '&:hover': {
+                backgroundColor: '#1e40af',
+              },
+            }}
+          >
+            Access Dashboard
+          </Button>
+        </Box>
       </Box>
     </Container>
   );

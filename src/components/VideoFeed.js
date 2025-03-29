@@ -3,7 +3,7 @@ import { Box, Typography, IconButton, Dialog, Paper } from '@mui/material';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseIcon from '@mui/icons-material/Close';
 
-const VideoFeed = ({ droneId, threatLevel }) => {
+const VideoFeed = ({ droneId }) => {
   const [open, setOpen] = useState(false);
 
   const handleOpen = () => setOpen(true);
@@ -11,83 +11,79 @@ const VideoFeed = ({ droneId, threatLevel }) => {
 
   return (
     <>
-      <Paper
-        elevation={0}
+      <Box
         sx={{
-          height: '100%',
-          backgroundColor: 'rgba(20, 20, 20, 0.95)',
-          border: '1px solid rgba(30, 64, 175, 0.1)',
-          borderRadius: '12px',
-          display: 'flex',
-          flexDirection: 'column',
+          position: 'relative',
+          borderRadius: '8px',
+          overflow: 'visible',
+          transform: 'scale(1)',
+          transition: 'all 0.3s ease-in-out',
+          '&:hover': {
+            transform: 'scale(1.02)',
+            '& .video-container': {
+              boxShadow: '0 0 25px rgba(59, 130, 246, 0.5)',
+            },
+            zIndex: 1,
+          },
         }}
       >
-        {/* Header with threat level and expand button */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            p: 2,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              color: threatLevel === 'HIGH' ? '#ef4444' : 
-                     threatLevel === 'MEDIUM' ? '#f59e0b' : '#22c55e',
-            }}
-          >
-            {threatLevel}
-          </Typography>
-          <IconButton 
-            onClick={handleOpen}
-            sx={{ 
-              color: '#1E40AF',
-              '&:hover': {
-                backgroundColor: 'rgba(30, 64, 175, 0.1)',
-              }
-            }}
-          >
-            <OpenInFullIcon />
-          </IconButton>
-        </Box>
-
-        {/* Video placeholder */}
-        <Box
-          sx={{
-            flex: 1,
-            backgroundColor: '#0A0A0A',
-            m: 2,
-            mt: 0,
-            borderRadius: '8px',
+        <Paper 
+          className="video-container"
+          elevation={3} 
+          sx={{ 
             position: 'relative',
-            width: '100%',
-            '&::before': {
-              content: '""',
-              display: 'block',
-              paddingTop: '56.25%', // 9/16 = 0.5625 = 56.25%
-            },
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            transition: 'box-shadow 0.3s ease-in-out',
+            boxShadow: '0 0 0 rgba(59, 130, 246, 0)',
           }}
         >
           <Box
             sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              position: 'relative',
+              width: '100%',
+              paddingTop: '56.25%', // 16:9 Aspect Ratio
             }}
           >
-            <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-              Live Feed - Drone {droneId}
-            </Typography>
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundColor: '#0A0A0A',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                Live Feed - Drone {droneId}
+              </Typography>
+            </Box>
+            <IconButton
+              onClick={handleOpen}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                color: 'white',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  transform: 'scale(1.1)',
+                },
+                transition: 'all 0.2s ease-in-out',
+                zIndex: 2,
+              }}
+            >
+              <OpenInFullIcon />
+            </IconButton>
           </Box>
-        </Box>
-      </Paper>
+        </Paper>
+      </Box>
 
       {/* Expanded view dialog */}
       <Dialog
@@ -103,7 +99,13 @@ const VideoFeed = ({ droneId, threatLevel }) => {
       >
         <Box sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-            <Typography variant="h4">
+            <Typography 
+              variant="h4"
+              className="gradient-text"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               Drone {droneId} - Detailed Analysis
             </Typography>
             <IconButton
@@ -143,28 +145,26 @@ const VideoFeed = ({ droneId, threatLevel }) => {
                 border: '1px solid rgba(30, 64, 175, 0.1)',
               }}
             >
-              <Typography variant="h6" gutterBottom>
-                Threat Analysis
-              </Typography>
-              <Typography
-                variant="h5"
+              <Typography 
+                variant="h6" 
                 gutterBottom
+                className="gradient-text"
                 sx={{
-                  color: threatLevel === 'HIGH' ? '#ef4444' : 
-                         threatLevel === 'MEDIUM' ? '#f59e0b' : '#22c55e',
+                  fontWeight: 600,
+                  fontSize: '1.5rem',
                   mb: 3,
                 }}
               >
-                {threatLevel} THREAT LEVEL
+                Analysis
               </Typography>
-              <Typography variant="body1" paragraph>
-                Sonar Data: [Simulated sonar readings]
-              </Typography>
-              <Typography variant="body1" paragraph>
-                Camera Analysis: [Object detection results]
-              </Typography>
-              <Typography variant="body1">
-                LLM Assessment: [Threat analysis details]
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  lineHeight: 1.7,
+                }}
+              >
+                [Awaiting LLM assessment...]
               </Typography>
             </Paper>
           </Box>
