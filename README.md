@@ -57,7 +57,7 @@ cd ai_defense
 
 2. Set up Python virtual environment:
 ```bash
-python -m venv venv
+python3 -m venv venv
 
 # On macOS/Linux
 source venv/bin/activate
